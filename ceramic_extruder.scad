@@ -24,6 +24,12 @@ rack(mm_per_tooth=9, numberOfTeeth=8, thickness=20, height=12, pressure_angle=28
 
 //nema17_mount_holes(depth=10, l=0, slop=0, $fn=60);
 //nema17_stepper($fn=60,shaft=20);
-flattedShaft(h=40,r=5,$fn=60);
+//flattedShaft(h=40,r=5,$fn=60);
 
-//gear(mm_per_tooth=4,number_of_teeth=10,thickness=5);
+
+echo(outer_radius(mm_per_tooth=4.2,number_of_teeth=10,clearance=0.1));
+
+difference() {
+  gear(mm_per_tooth=4.2,number_of_teeth=10,clearance=0.1,thickness=5);
+  flattedShaft(h=40,r=2.5,$fn=60,center=true);
+}
