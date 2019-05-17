@@ -31,4 +31,5 @@ fi
 cd "$REMOTE"
 git clone https://github.com/revarbat/BOSL
 git clone https://github.com/erhannis/gears
+git clone https://github.com/erhannis/erhannisScad
 
