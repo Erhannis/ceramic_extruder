@@ -103,9 +103,10 @@ breite = face width
 eingriffswinkel = pressure angle, standard value = 20° according to DIN 867. Should not be greater than 45°.
 schraegungswinkel = bevel angle perpendicular to the rack's length; 0° = straight teeth
 */
-
+/*
 mirror([0,0,1])
 zahnstange(modul=modul, laenge=50, hoehe=20, breite=10, eingriffswinkel=p_angle, schraegungswinkel=lead_angle);
+*/
 
 /*
 D=10;
@@ -121,13 +122,110 @@ for (i=[0,1,2,3,4]) {
 }
 */
 
+/**
+Negative mmPerRev for reverse orientaton
+Outer ys = ys + o
+Inner ys = ys - o
+slop is added to o of worm used to cut rack
+*/
+module worm_rack(xs = 10, ys = 15, z = 20, worm_diam = 50, o = 1, mmPerRev = 2) {
+  difference() {
+    cube([xs, ys+o, z]);
+    translate([xs/2, ys + worm_diam/2, 0])
+      worm(h = z, d = worm_diam, o = o, mmPerRev = mmPerRev);
+  }
+}
+
+// Meshing cutaway
+/*
+difference() {
+  union() {
+    $fn = 100;
+    xs = 10;
+    ys = 15;
+    z = 20;
+    worm_diam = 50;
+    o = 1;
+    mmPerRev = 2;
+    slop = 0.5;
+    difference() {
+      worm_rack(slop=slop);
+      translate([-95,0,0])
+        cube([100,100,100]);
+      translate([5.5,0,0])
+        cube([100,100,100]);
+    }
+    translate([0.5,0,0])
+    difference() {
+      translate([xs/2, ys + worm_diam/2, 0])
+        worm(h = z, d = worm_diam, o = o, mmPerRev = mmPerRev);
+      translate([-95,0,0])
+        cube([100,100,100]);
+      translate([5.5,0,0])
+        cube([100,100,100]);
+    }
+  }
+}
+*/
+
+/**
+Negative mmPerRev for reverse orientaton
+Outer diameter = d + 2o
+Inner diameter = d - 2o
+*/
+module worm(h = 20, d = 50, o = 1, mmPerRev = 2) {
+  twist = 360 * h / mmPerRev;
+  linear_extrude(height = h, center = false, convexity = 10, twist = twist)
+  translate([o, 0, 0])
+  circle(d=d);
+}
+
 {
   FOREVER = 1000;
   SYRINGE_HOLE_DIAM = 18.5;
   SYRINGE_DIAM = 16.5;
   SYRINGE_LENGTH = 76;
 }
-skip() { // Main block
+
+
+GEAR_OFFSET = 1;
+WORM_DIAM = 50;
+WORM_HEIGHT = 20;
+MM_PER_REV = 2.08;
+/*
+difference() { // Worm
+  worm(h = 20, d = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
+  flattedShaft(h=40,r=2.5,center=true);
+}
+*/
+
+RACK_SIZE_X = 7;
+RACK_SIZE_Y = 7 + GEAR_OFFSET;
+RACK_OVERHANG_SIZE_X = RACK_SIZE_X;
+RACK_OVERHANG_SIZE_Y = 20;
+RACK_OVERHANG_LEDGE_Z = RACK_OVERHANG_SIZE_X;
+RACK_OVERHANG_SIZE_Z = RACK_OVERHANG_SIZE_Y + RACK_OVERHANG_LEDGE_Z;
+RACK_SIZE_Z = SYRINGE_LENGTH + RACK_OVERHANG_SIZE_Z + 15;
+
+
+union() { // Plunger
+  if (true) {
+  worm_rack(xs = RACK_SIZE_X, ys = RACK_SIZE_Y - GEAR_OFFSET, z = RACK_SIZE_Z, worm_diam = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
+  } else {
+    cube([RACK_SIZE_X, RACK_SIZE_Y, RACK_SIZE_Z]);
+  }
+  translate([0,-RACK_OVERHANG_SIZE_Y,RACK_SIZE_Z-RACK_OVERHANG_SIZE_Z]) {
+    difference() {
+      cube([RACK_OVERHANG_SIZE_X, RACK_OVERHANG_SIZE_Y, RACK_OVERHANG_SIZE_Z]);
+      translate([0,0,RACK_OVERHANG_LEDGE_Z])
+      rotate([45,0,0])
+        cube(FOREVER);
+    }
+  }
+}
+
+/*
+{ // Main block
   PLATE_SIZE_X = 28;
   PLATE_SIZE_Y = 100;
   PLATE_SIZE_Z = 5;
@@ -136,9 +234,12 @@ skip() { // Main block
   BLOCK_SIZE_Y = 35;
   BLOCK_SIZE_Z = 52;
   
-  RACK_SIZE_X = 7;
-  RACK_SIZE_Y = 7;
-  RACK_SIZE_Z = SYRINGE_LENGTH;
+  BRACE_SIZE_X = BLOCK_SIZE_X;
+  BRACE_SIZE_Y = RACK_SIZE_Y;
+  BRACE_SIZE_Z = RACK_SIZE_Z + 10;
+  BRACE_TWEAK_Z = -35;
+  
+  SLOP = 1;
   
   MOTOR_SIZE_Z = 40;
   difference() {
@@ -157,9 +258,46 @@ skip() { // Main block
           }
         }
       }
+      translate([0,BLOCK_SIZE_Y/2,BLOCK_SIZE_Z+PLATE_SIZE_Z+RACK_SIZE_Z-BRACE_SIZE_Z]) {
+        // Main spire
+        translate([-BRACE_SIZE_X/2, 0, 0])
+          cube([BRACE_SIZE_X, BRACE_SIZE_Y, BRACE_SIZE_Z+BRACE_TWEAK_Z]);
+        
+        // Inner brace
+        translate([-BRACE_SIZE_X/2, -RACK_SIZE_Y/2, 0])
+          cube([BRACE_SIZE_X, RACK_SIZE_Y/2, 2*WORM_HEIGHT]);
+        
+        // Top bevel
+        translate([0,0,2*WORM_HEIGHT])
+        scale([BRACE_SIZE_X, RACK_SIZE_Y/2, RACK_SIZE_Y/2])
+        translate([-0.5,-1,0])
+        difference() {
+          cube(1);
+          rotate([45,0,0])
+            cube(3);
+        }
+        
+        // Outer brace bevel
+        scale([BRACE_SIZE_X, BRACE_SIZE_Y, BRACE_SIZE_Y])
+        translate([-0.5,1,0])
+        mirror([0,1,0])
+        mirror([0,0,1])
+        difference() {
+          cube(1);
+          rotate([45,0,0])
+            cube(3);
+        }
+      }
     }
     translate([0,BLOCK_SIZE_Y/2,0])
-      cube([RACK_SIZE_X, RACK_SIZE_Y, FOREVER], center=true);
-    cylinder(d=SYRINGE_HOLE_DIAM, h=FOREVER, center=true);
+      cube([RACK_SIZE_X+SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
+    cylinder(d=SYRINGE_DIAM+SLOP, h=FOREVER, center=true);
+    { // Worm cutout
+      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, BLOCK_SIZE_Z + PLATE_SIZE_Z - 5])
+        cylinder(d=WORM_DIAM+GEAR_OFFSET+SLOP, h=WORM_HEIGHT+SLOP);
+      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, BLOCK_SIZE_Z + PLATE_SIZE_Z - 5 + WORM_HEIGHT + SLOP])
+        cylinder(d1=WORM_DIAM+GEAR_OFFSET+SLOP, d2=0, h=WORM_DIAM);
+    }
   }
 }
+*/
