@@ -55,6 +55,21 @@ module nema17_housing(motor_height = 39.3, side_thickness = 10, top_thickness = 
 
 //nema17_housing(slop=1, top=false);
 
+module undercut(size=[1,1,1], center=false) {
+  translate([center ? -size[0]/2 : 0, center ? -size[1]/2 : 0, center ? -size[2]/2 : 0]) {
+  cube(size);
+  translate([0,0,size[2]])
+  scale([size[0],size[1],size[0]])
+  difference() {
+    cube(1);
+    rotate([0,-45,0])
+      cube(3);
+  }
+  }
+}
+
+//undercut([5, 10, 7], center=true);
+
 /*
 translate([40,0,0])
 difference() {
@@ -163,7 +178,7 @@ RACK_OVERHANG_LEDGE_Z = RACK_OVERHANG_SIZE_X;
 RACK_OVERHANG_SIZE_Z = RACK_OVERHANG_SIZE_Y + RACK_OVERHANG_LEDGE_Z;
 RACK_SIZE_Z = SYRINGE_LENGTH + RACK_OVERHANG_SIZE_Z + 15;
 
-
+/*
 union() { // Plunger
   if (true) {
   worm_rack(xs = RACK_SIZE_X, ys = RACK_SIZE_Y - GEAR_OFFSET, z = RACK_SIZE_Z, worm_diam = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
@@ -179,6 +194,7 @@ union() { // Plunger
     }
   }
 }
+*/
 
 
 
@@ -194,16 +210,17 @@ BLOCK_SIZE_Z = 52;
 BRACE_SIZE_X = BLOCK_SIZE_X;
 BRACE_SIZE_Y = RACK_SIZE_Y;
 BRACE_SIZE_Z = RACK_SIZE_Z + 10;
-BRACE_Y_COVER = 2.5;
+BRACE_Y_COVER = 0;//2.5;
 BRACE_TWEAK_Z = -35;
 
-WORM_CUTOUT_Z_OFFSET = -7.7;
+WORM_CUTOUT_Z_OFFSET = -8.7 + PLATE_SIZE_Z+7;
 
 SLOP = 1;
+MOTOR_HOUSING_SLOP = 0;
 
 MOTOR_SIZE_Z = 39.3;
 
-/*
+
 { // Main block
   difference() {
     union() {
@@ -211,21 +228,11 @@ MOTOR_SIZE_Z = 39.3;
         cube([BLOCK_SIZE_X, BLOCK_SIZE_Y, BLOCK_SIZE_Z], center=true);
       translate([-PLATE_SIZE_X/2, PLATE_OFFSET-PLATE_SIZE_Y/2, 0])
         plate();
-      skip() { //TODO Wait, this can't really hang out in space like that.
-        MOTOR_PLATE_THICKNESS = 7;
-        MOTOR_WIDTH = nema_motor_width(17);
-        translate([0,(MOTOR_WIDTH+BLOCK_SIZE_Y)/2,MOTOR_SIZE_Z+PLATE_SIZE_Z+5]) {
-          difference() {
-            cube([MOTOR_WIDTH,MOTOR_WIDTH,MOTOR_PLATE_THICKNESS], center=true);
-            nema17_mount_holes(depth=MOTOR_PLATE_THICKNESS, l=0, slop=0);
-          }
-        }
-      }
       translate([0,BLOCK_SIZE_Y/2,BLOCK_SIZE_Z+PLATE_SIZE_Z+RACK_SIZE_Z-BRACE_SIZE_Z]) {
         // Main spire
         translate([-BRACE_SIZE_X/2, 0, 0])
           cube([BRACE_SIZE_X, BRACE_SIZE_Y, BRACE_SIZE_Z+BRACE_TWEAK_Z]);
-        
+                
         // Inner brace
         translate([-BRACE_SIZE_X/2, -BRACE_Y_COVER-RACK_SIZE_Y/2, 0])
           cube([BRACE_SIZE_X, BRACE_Y_COVER + RACK_SIZE_Y/2, 2*WORM_HEIGHT - BRACE_Y_COVER]);
@@ -251,16 +258,36 @@ MOTOR_SIZE_Z = 39.3;
             cube(3);
         }
       }
-      { // Motor housing
+      { // New spire base
+        translate([0,BLOCK_SIZE_Y/2,0])
+        translate([-BRACE_SIZE_X/2, 0, 0])
+        cube([BRACE_SIZE_X, BRACE_SIZE_Y, BRACE_SIZE_Z+BRACE_TWEAK_Z]);
+      }
+      difference() {
+        // Yes, I know this is a mess
         translate([0,0,-5.5 - MOTOR_SIZE_Z/2])
           translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET])
             difference() {
-              nema17_housing(slop=SLOP, top=false);
+              union() {
+                nema17_housing(slop=MOTOR_HOUSING_SLOP, top=false, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
+                // Base
+                BASE_SIZE_Z = BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET -5.5 - MOTOR_SIZE_Z/2 -(2*MOTOR_HOUSING_TOP_THICKNESS+MOTOR_SIZE_Z + 2*MOTOR_HOUSING_SLOP)/2;
+                translate([0,0,BASE_SIZE_Z/2 -(-5.5 - MOTOR_SIZE_Z/2) -(BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET)])
+                  cube([2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, 2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, BASE_SIZE_Z], center=true);
+              }
               translate([0,10,0])
-                  translate([0,FOREVER/2,0])
-                    cube([nema_motor_width(17)+2*SLOP, FOREVER, FOREVER], center=true);
+                translate([0,FOREVER/2,0])
+                  cube([nema_motor_width(17)+2*MOTOR_HOUSING_SLOP, FOREVER, FOREVER], center=true);
             }
-        
+        {// Cutouts
+          CUTOUT_SIZE_X = 10;
+          translate([-CUTOUT_SIZE_X - PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, 0])
+            undercut([CUTOUT_SIZE_X, FOREVER, 10.5]);
+          translate([CUTOUT_SIZE_X + PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, 0])
+            translate([0,FOREVER,0])
+            rotate([0,0,180])
+            undercut([CUTOUT_SIZE_X, FOREVER, 10.5]);
+        }
       }
     }
     translate([0,BLOCK_SIZE_Y/2,0])
@@ -274,15 +301,15 @@ MOTOR_SIZE_Z = 39.3;
     }
   }
 }
-*/
+
 
 MOTOR_HOUSING_SIDE_THICKNESS = 10;
 MOTOR_HOUSING_TOP_THICKNESS = 3.5;
 /*
-translate([70,0,MOTOR_SIZE_Z/2+SLOP+MOTOR_HOUSING_TOP_THICKNESS])
+translate([70,0,MOTOR_SIZE_Z/2+MOTOR_HOUSING_SLOP+MOTOR_HOUSING_TOP_THICKNESS])
 difference() { // Motor housing top
-  nema17_housing(slop=SLOP, top=true);
+  nema17_housing(slop=MOTOR_HOUSING_SLOP, top=true, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
   translate([0, -(nema_motor_width(17)+MOTOR_HOUSING_SIDE_THICKNESS)/2-SLOP, 0])
-    cube([PLATE_SIZE_X, MOTOR_HOUSING_SIDE_THICKNESS, FOREVER], center=true);
+    cube([PLATE_SIZE_X+2*SLOP, MOTOR_HOUSING_SIDE_THICKNESS+2*SLOP, FOREVER], center=true);
 }
 */
