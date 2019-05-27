@@ -170,6 +170,7 @@ difference() { // Worm
 }
 */
 
+
 RACK_SIZE_X = 7;
 RACK_SIZE_Y = 7 + GEAR_OFFSET;
 RACK_OVERHANG_SIZE_X = RACK_SIZE_X;
@@ -179,23 +180,24 @@ RACK_OVERHANG_SIZE_Z = RACK_OVERHANG_SIZE_Y + RACK_OVERHANG_LEDGE_Z;
 RACK_SIZE_Z = SYRINGE_LENGTH + RACK_OVERHANG_SIZE_Z + 15;
 
 /*
-union() { // Plunger
-  if (true) {
-  worm_rack(xs = RACK_SIZE_X, ys = RACK_SIZE_Y - GEAR_OFFSET, z = RACK_SIZE_Z, worm_diam = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
-  } else {
-    cube([RACK_SIZE_X, RACK_SIZE_Y, RACK_SIZE_Z]);
-  }
-  translate([0,-RACK_OVERHANG_SIZE_Y,RACK_SIZE_Z-RACK_OVERHANG_SIZE_Z]) {
-    difference() {
-      cube([RACK_OVERHANG_SIZE_X, RACK_OVERHANG_SIZE_Y, RACK_OVERHANG_SIZE_Z]);
-      translate([0,0,RACK_OVERHANG_LEDGE_Z])
-      rotate([45,0,0])
-        cube(FOREVER);
+rotate([0,-90,0]) { // Plunger
+  union() {
+    if (true) {
+      worm_rack(xs = RACK_SIZE_X, ys = RACK_SIZE_Y - GEAR_OFFSET, z = RACK_SIZE_Z, worm_diam = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
+    } else {
+      cube([RACK_SIZE_X, RACK_SIZE_Y, RACK_SIZE_Z]);
+    }
+    translate([0,-RACK_OVERHANG_SIZE_Y,RACK_SIZE_Z-RACK_OVERHANG_SIZE_Z]) {
+      difference() {
+        cube([RACK_OVERHANG_SIZE_X, RACK_OVERHANG_SIZE_Y, RACK_OVERHANG_SIZE_Z]);
+        translate([0,0,RACK_OVERHANG_LEDGE_Z])
+        rotate([45,0,0])
+          cube(FOREVER);
+      }
     }
   }
 }
 */
-
 
 
 PLATE_SIZE_X = 28;
