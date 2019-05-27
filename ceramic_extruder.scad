@@ -57,14 +57,14 @@ module nema17_housing(motor_height = 39.3, side_thickness = 10, top_thickness = 
 
 module undercut(size=[1,1,1], center=false) {
   translate([center ? -size[0]/2 : 0, center ? -size[1]/2 : 0, center ? -size[2]/2 : 0]) {
-  cube(size);
-  translate([0,0,size[2]])
-  scale([size[0],size[1],size[0]])
-  difference() {
-    cube(1);
-    rotate([0,-45,0])
-      cube(3);
-  }
+    cube(size);
+    translate([0,0,size[2]])
+    scale([size[0],size[1],size[0]])
+    difference() {
+      cube(1);
+      rotate([0,-45,0])
+        cube(3);
+    }
   }
 }
 
@@ -159,7 +159,7 @@ module worm(h = 20, d = 50, o = 1, mmPerRev = 2) {
 
 
 GEAR_OFFSET = 1;
-WORM_DIAM = 58;
+WORM_DIAM = 52;
 WORM_HEIGHT = 20;
 MM_PER_REV = 2.08;
 
@@ -265,8 +265,8 @@ MOTOR_SIZE_Z = 39.3;
       }
       difference() {
         // Yes, I know this is a mess
-        translate([0,0,-5.5 - MOTOR_SIZE_Z/2])
-          translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET])
+        translate([0,0,-5.5 - MOTOR_SIZE_Z/2]) {
+          translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET]) {
             difference() {
               union() {
                 nema17_housing(slop=MOTOR_HOUSING_SLOP, top=false, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
@@ -279,14 +279,22 @@ MOTOR_SIZE_Z = 39.3;
                 translate([0,FOREVER/2,0])
                   cube([nema_motor_width(17)+2*MOTOR_HOUSING_SLOP, FOREVER, FOREVER], center=true);
             }
+          }
+        }
         {// Cutouts
           CUTOUT_SIZE_X = 10;
-          translate([-CUTOUT_SIZE_X - PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, 0])
+          translate([-CUTOUT_SIZE_X - PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
             undercut([CUTOUT_SIZE_X, FOREVER, 10.5]);
-          translate([CUTOUT_SIZE_X + PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, 0])
+          translate([CUTOUT_SIZE_X + PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
             translate([0,FOREVER,0])
             rotate([0,0,180])
             undercut([CUTOUT_SIZE_X, FOREVER, 10.5]);
+          for (i = [0,1])
+            mirror([i,0,0])
+              translate([CUTOUT_SIZE_X + PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
+                translate([0,-8,0])
+                  rotate([0,0,90])
+                    undercut([10, CUTOUT_SIZE_X, 1]);
         }
       }
     }
@@ -294,9 +302,9 @@ MOTOR_SIZE_Z = 39.3;
       cube([RACK_SIZE_X+SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
     cylinder(d=SYRINGE_DIAM+SLOP, h=FOREVER, center=true);
     { // Worm cutout
-      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET])
+      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET])
         cylinder(d=WORM_DIAM+GEAR_OFFSET+SLOP, h=WORM_HEIGHT+SLOP);
-      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET + WORM_HEIGHT + SLOP])
+      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET + WORM_HEIGHT + SLOP])
         cylinder(d1=WORM_DIAM+GEAR_OFFSET+SLOP, d2=0, h=WORM_DIAM);
     }
   }
