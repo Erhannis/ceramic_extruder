@@ -152,7 +152,7 @@ module worm(h = 20, d = 50, o = 1, mmPerRev = 2) {
 
 {
   FOREVER = 1000;
-  SYRINGE_HOLE_DIAM = 18.5;
+  SYRINGE_HOLE_DIAM = 18;
   SYRINGE_DIAM = 16.5;
   SYRINGE_LENGTH = 76;
 }
@@ -163,12 +163,14 @@ WORM_DIAM = 52;
 WORM_HEIGHT = 20;
 MM_PER_REV = 2.08;
 
+
 /*
 difference() { // Worm
   worm(h = 20, d = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
-  flattedShaft(h=40,r=2.5,center=true);
+  flattedShaft(h=40,r=2.5 + 0.15,center=true);
 }
 */
+
 
 
 RACK_SIZE_X = 7;
@@ -178,6 +180,8 @@ RACK_OVERHANG_SIZE_Y = 20;
 RACK_OVERHANG_LEDGE_Z = RACK_OVERHANG_SIZE_X;
 RACK_OVERHANG_SIZE_Z = RACK_OVERHANG_SIZE_Y + RACK_OVERHANG_LEDGE_Z;
 RACK_SIZE_Z = SYRINGE_LENGTH + RACK_OVERHANG_SIZE_Z + 15;
+
+RACK_OFFSET_Y = 2;
 
 /*
 rotate([0,-90,0]) { // Plunger
@@ -216,6 +220,7 @@ BRACE_Y_COVER = 0;//2.5;
 BRACE_TWEAK_Z = -35;
 
 WORM_CUTOUT_Z_OFFSET = -8.7 + PLATE_SIZE_Z+7;
+WORM_SLOP = 0.8;
 
 SLOP = 1;
 MOTOR_HOUSING_SLOP = 0;
@@ -270,12 +275,14 @@ MOTOR_SIZE_Z = 39.3;
         translate([0,0,-5.5 - MOTOR_SIZE_Z/2]) {
           translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET]) {
             difference() {
-              union() {
-                nema17_housing(slop=MOTOR_HOUSING_SLOP, top=false, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
-                // Base
-                BASE_SIZE_Z = BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET -5.5 - MOTOR_SIZE_Z/2 -(2*MOTOR_HOUSING_TOP_THICKNESS+MOTOR_SIZE_Z + 2*MOTOR_HOUSING_SLOP)/2;
-                translate([0,0,BASE_SIZE_Z/2 -(-5.5 - MOTOR_SIZE_Z/2) -(BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET)])
-                  cube([2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, 2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, BASE_SIZE_Z], center=true);
+              translate([0,WORM_SLOP,0]) {
+                union() {
+                  nema17_housing(slop=MOTOR_HOUSING_SLOP, top=false, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
+                  // Base
+                  BASE_SIZE_Z = BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET -5.5 - MOTOR_SIZE_Z/2 -(2*MOTOR_HOUSING_TOP_THICKNESS+MOTOR_SIZE_Z + 2*MOTOR_HOUSING_SLOP)/2;
+                  translate([0,0,BASE_SIZE_Z/2 -(-5.5 - MOTOR_SIZE_Z/2) -(BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET)])
+                    cube([2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, 2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, BASE_SIZE_Z], center=true);
+                }
               }
               translate([0,10,0])
                 translate([0,FOREVER/2,0])
@@ -300,7 +307,9 @@ MOTOR_SIZE_Z = 39.3;
         }
       }
     }
-    translate([0,BLOCK_SIZE_Y/2,0])
+    translate([0,RACK_OFFSET_Y+BLOCK_SIZE_Y/2,0]) // Rack hole
+      cube([RACK_SIZE_X+SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
+    translate([0,RACK_OFFSET_Y+BLOCK_SIZE_Y/2-RACK_SIZE_Y,FOREVER/2+BLOCK_SIZE_Z+PLATE_SIZE_Z]) // Remove wall covering rack, nearest syringe
       cube([RACK_SIZE_X+SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
     cylinder(d=SYRINGE_DIAM+SLOP, h=FOREVER, center=true);
     { // Worm cutout
@@ -315,11 +324,12 @@ MOTOR_SIZE_Z = 39.3;
 
 MOTOR_HOUSING_SIDE_THICKNESS = 10;
 MOTOR_HOUSING_TOP_THICKNESS = 3.5;
+
 /*
 translate([70,0,MOTOR_SIZE_Z/2+MOTOR_HOUSING_SLOP+MOTOR_HOUSING_TOP_THICKNESS])
 difference() { // Motor housing top
   nema17_housing(slop=MOTOR_HOUSING_SLOP, top=true, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
-  translate([0, -(nema_motor_width(17)+MOTOR_HOUSING_SIDE_THICKNESS)/2-SLOP, 0])
-    cube([PLATE_SIZE_X+2*SLOP, MOTOR_HOUSING_SIDE_THICKNESS+2*SLOP, FOREVER], center=true);
+  translate([0,WORM_SLOP/2 -(nema_motor_width(17)+MOTOR_HOUSING_SIDE_THICKNESS)/2-SLOP, 0])
+    cube([PLATE_SIZE_X+2*SLOP,WORM_SLOP + MOTOR_HOUSING_SIDE_THICKNESS+2*SLOP, FOREVER], center=true);
 }
 */
