@@ -1,7 +1,14 @@
+// Ok, I have 25mm extra room I can use without reprinting part of my printer's structure
+// Looks like 54mm is reasonable for a small gear's circumference; ~17mm diam
+// Soo...seems like a 1:12 gear ratio may be acceptable??  Not sure
+// Motor is 39.5 tall, 42 wide
+
+
 use <deps.link/BOSL/nema_steppers.scad>
 use <deps.link/BOSL/joiners.scad>
 use <deps.link/erhannisScad/misc.scad>
 use <deps.link/quickfitPlate/blank_plate.scad>
+use <deps.link/moreGears/Getriebe.scad>
 
 $fn=60;
 
@@ -53,6 +60,49 @@ module nema17_housing(motor_height = 39.3, side_thickness = 10, top_thickness = 
   }
 }
 
+module nema17_housing_on_side(motor_height = 39.3, side_thickness = 10, top_thickness = 3.5, slop = 0, joiner_clearance = 0, top = false) {
+  //TODO Fix
+  NEMA = 17;
+  WIDTH = nema_motor_width(NEMA);
+  THICK = side_thickness;
+  difference() {
+    cube([2*THICK+motor_height + 2*slop, 2*THICK+WIDTH + 2*slop, 2*top_thickness+WIDTH + 2*slop], center=true);
+    echo(WIDTH-2*THICK);
+    cube([FOREVER, WIDTH-2*THICK, WIDTH+2*slop], center=true);
+    cube([motor_height-2*THICK, FOREVER, WIDTH+2*slop], center=true);
+    if (false) {
+      cube([motor_height-2*THICK+2*slop, WIDTH-2*THICK+2*slop, FOREVER], center=true);
+    } else {
+      //TODO Alter for side
+      cylinder(d=nema_motor_plinth_diam(NEMA)+2*slop+THICK/2, h=FOREVER, center=true);
+    }
+    cube([motor_height+2*slop, WIDTH+2*slop, WIDTH+2*slop], center=true);
+    
+    mirror([top?1:0,0,0])
+    for (i = [0:3]) {
+      rotate([0,0,i*90])
+        translate([motor_height/2 + THICK/2  + slop,-WIDTH/2 - slop,0])
+          translate([0,0,-THICK/2])
+            cube([THICK, 2*THICK, THICK], center=true);
+    }
+    
+    translate([-FOREVER/2, -FOREVER/2, 0])
+      cube(FOREVER);
+    cube(FOREVER);
+  }
+
+  mirror([top?1:0,0,0])
+  for (i = [0:3]) {
+    rotate([0,0,i*90])
+      translate([motor_height/2 + THICK/2 + slop,-WIDTH/2 - slop,0])
+        rotate([90,0,0])
+          if (top)
+            half_joiner2(h=THICK*2, w=THICK);
+          else
+            half_joiner(h=THICK*2, w=THICK);
+  }
+}
+
 //nema17_housing(slop=1, top=false);
 
 module undercut(size=[1,1,1], center=false) {
@@ -74,81 +124,9 @@ module undercut(size=[1,1,1], center=false) {
 translate([40,0,0])
 difference() {
   gear(mm_per_tooth=4.2,number_of_teeth=10,clearance=0.1,thickness=5);
-  flattedShaft(h=40,r=2.5,center=true);
+  flattedShaft(h=40,r=2.5 + 0.15,center=true);
 }
 */
-
-/*
-D=10;
-H=3;
-for (i=[0,1,2,3,4]) {
-  translate([(D+2)*i,0,0]) {
-    difference() {
-      cylinder(d=D,h=H);
-      //flattedShaft(r=1.5+(i*0.05), h=H);
-      cylinder(r=1.5+(i*0.05), h=H);
-    }
-  }
-}
-*/
-
-/**
-Negative mmPerRev for reverse orientaton
-Outer ys = ys + o
-Inner ys = ys - o
-slop is added to o of worm used to cut rack
-*/
-module worm_rack(xs = 10, ys = 15, z = 20, worm_diam = 50, o = 1, mmPerRev = 2) {
-  difference() {
-    cube([xs, ys+o, z]);
-    translate([xs/2, ys + worm_diam/2, 0])
-      worm(h = z, d = worm_diam, o = o, mmPerRev = mmPerRev);
-  }
-}
-
-// Meshing cutaway
-/*
-difference() {
-  union() {
-    $fn = 100;
-    xs = 10;
-    ys = 15;
-    z = 20;
-    worm_diam = 50;
-    o = 1;
-    mmPerRev = 2;
-    slop = 0.5;
-    difference() {
-      worm_rack(slop=slop);
-      translate([-95,0,0])
-        cube([100,100,100]);
-      translate([5.5,0,0])
-        cube([100,100,100]);
-    }
-    translate([0.5,0,0])
-    difference() {
-      translate([xs/2, ys + worm_diam/2, 0])
-        worm(h = z, d = worm_diam, o = o, mmPerRev = mmPerRev);
-      translate([-95,0,0])
-        cube([100,100,100]);
-      translate([5.5,0,0])
-        cube([100,100,100]);
-    }
-  }
-}
-*/
-
-/**
-Negative mmPerRev for reverse orientaton
-Outer diameter = d + 2o
-Inner diameter = d - 2o
-*/
-module worm(h = 20, d = 50, o = 1, mmPerRev = 2) {
-  twist = 360 * h / mmPerRev;
-  linear_extrude(height = h, center = false, convexity = 10, twist = twist)
-  translate([o, 0, 0])
-  circle(d=d);
-}
 
 {
   FOREVER = 1000;
@@ -159,23 +137,11 @@ module worm(h = 20, d = 50, o = 1, mmPerRev = 2) {
 
 
 GEAR_OFFSET = 1;
-WORM_DIAM = 52;
-WORM_HEIGHT = 20;
-MM_PER_REV = 2.08;
-
-
-/*
-difference() { // Worm
-  worm(h = 20, d = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
-  flattedShaft(h=40,r=2.5 + 0.15,center=true);
-}
-*/
-
-
 
 RACK_SIZE_X = 7;
 RACK_SIZE_Y = 7 + GEAR_OFFSET;
 RACK_OVERHANG_SIZE_X = RACK_SIZE_X;
+RACK_OVERHANG_STICKOUT_SIZE_Y = 39-9.5;
 RACK_OVERHANG_SIZE_Y = 20;
 RACK_OVERHANG_LEDGE_Z = RACK_OVERHANG_SIZE_X;
 RACK_OVERHANG_SIZE_Z = RACK_OVERHANG_SIZE_Y + RACK_OVERHANG_LEDGE_Z;
@@ -183,15 +149,21 @@ RACK_SIZE_Z = SYRINGE_LENGTH + RACK_OVERHANG_SIZE_Z + 15;
 
 RACK_OFFSET_Y = 2;
 
-/*
-rotate([0,-90,0]) { // Plunger
+WORM_DIAM = 52;
+WORM_HEIGHT = RACK_SIZE_X;
+MM_PER_REV = 2.08;
+
+* rotate([0,-90,0])
+{ // Plunger
   union() {
-    if (true) {
+    if (false) {
       worm_rack(xs = RACK_SIZE_X, ys = RACK_SIZE_Y - GEAR_OFFSET, z = RACK_SIZE_Z, worm_diam = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
     } else {
       cube([RACK_SIZE_X, RACK_SIZE_Y, RACK_SIZE_Z]);
     }
     translate([0,-RACK_OVERHANG_SIZE_Y,RACK_SIZE_Z-RACK_OVERHANG_SIZE_Z]) {
+      translate([0,RACK_OVERHANG_SIZE_Y-RACK_OVERHANG_STICKOUT_SIZE_Y,0])
+        cube([RACK_OVERHANG_SIZE_X, RACK_OVERHANG_STICKOUT_SIZE_Y, RACK_OVERHANG_LEDGE_Z]);
       difference() {
         cube([RACK_OVERHANG_SIZE_X, RACK_OVERHANG_SIZE_Y, RACK_OVERHANG_SIZE_Z]);
         translate([0,0,RACK_OVERHANG_LEDGE_Z])
@@ -201,7 +173,7 @@ rotate([0,-90,0]) { // Plunger
     }
   }
 }
-*/
+
 
 
 PLATE_SIZE_X = 28;
@@ -219,7 +191,7 @@ BRACE_SIZE_Z = RACK_SIZE_Z + 10;
 BRACE_Y_COVER = 0;//2.5;
 BRACE_TWEAK_Z = -35;
 
-WORM_CUTOUT_Z_OFFSET = -8.7 + PLATE_SIZE_Z+7;
+WORM_OZ = PLATE_SIZE_Z+22;
 WORM_SLOP = 0.8;
 
 SLOP = 1;
@@ -227,11 +199,51 @@ MOTOR_HOUSING_SLOP = 0;
 
 MOTOR_SIZE_Z = 39.3;
 
+function test(modul, zahnzahl_rad, zahnzahl_ritzel, achsenwinkel=90, zahnbreite, bohrung, eingriffswinkel = 20, schraegungswinkel=0) = let (
+  zahnzahl = zahnzahl_rad,
+	delta_rad = atan(sin(achsenwinkel)/(zahnzahl_ritzel/zahnzahl_rad+cos(achsenwinkel))),	// Kegelwinkel des Rads
+  teilkegelwinkel = delta_rad,
+  
+	// Dimensions-Berechnungen
+	d_aussen = modul * zahnzahl,									// Teilkegeldurchmesser auf der Kegelgrundfläche,
+																	// entspricht der Sehne im Kugelschnitt
+	r_aussen = d_aussen / 2,										// Teilkegelradius auf der Kegelgrundfläche 
+	rg_aussen = r_aussen/sin(teilkegelwinkel),						// Großkegelradius für Zahn-Außenseite, entspricht der Länge der Kegelflanke;
+	c = modul / 6,													// Kopfspiel
+	df_aussen = d_aussen - (modul +c) * 2 * cos(teilkegelwinkel),
+	rf_aussen = df_aussen / 2,
+	delta_f = asin(rf_aussen/rg_aussen),
+	rkf = rg_aussen*sin(delta_f),									// Radius des Kegelfußes
+	// Größen für Komplementär-Kegelstumpf
+	hoehe_k = (rg_aussen-zahnbreite)/cos(teilkegelwinkel),			// Höhe des Komplementärkegels für richtige Zahnlänge
+	rk = (rg_aussen-zahnbreite)/sin(teilkegelwinkel),				// Fußradius des Komplementärkegels
+	rfk = rk*hoehe_k*tan(delta_f)/(rk+hoehe_k*tan(delta_f)),		// Kopfradius des Zylinders für 
+																	// Komplementär-Kegelstumpf
+  
+  
+  outer = rkf*1.001,
+  inner = (rfk/rkf) * rkf*1.001
+  ) outer;
 
-{ // Main block
+
+  GEAR_SIZE_MULTIPLIER = 1;
+
+
+difference() {
+  union() {
+    outer_r = test(modul=1*GEAR_SIZE_MULTIPLIER, zahnzahl_rad=50, zahnzahl_ritzel=11, achsenwinkel=90, zahnbreite=5*GEAR_SIZE_MULTIPLIER, bohrung=3, eingriffswinkel = 20, schraegungswinkel=30);
+    translate([0,0,-5]) cylinder(r=outer_r,h=5);
+    pfeilkegelradpaar(modul=1*GEAR_SIZE_MULTIPLIER, zahnzahl_rad=50, zahnzahl_ritzel=11, achsenwinkel=90, zahnbreite=5*GEAR_SIZE_MULTIPLIER, bohrung_rad=3, bohrung_ritzel=3, eingriffswinkel = 20, schraegungswinkel=30, zusammen_gebaut=false);
+  }
+  translate([35,0,0])
+    flattedShaft(h=40,r=2.5 + 0.15,center=true);
+  flattedShaft(h=40,r=2.5 + 0.15,center=true);
+}
+
+* union() { // Main block
   difference() {
     union() {
-      translate([0,0,BLOCK_SIZE_Z/2 + PLATE_SIZE_Z])
+      translate([0,0,BLOCK_SIZE_Z/2 + PLATE_SIZE_Z]) // Body block
         cube([BLOCK_SIZE_X, BLOCK_SIZE_Y, BLOCK_SIZE_Z], center=true);
       translate([-PLATE_SIZE_X/2, PLATE_OFFSET-PLATE_SIZE_Y/2, 0])
         plate();
@@ -270,17 +282,30 @@ MOTOR_SIZE_Z = 39.3;
         translate([-BRACE_SIZE_X/2, 0, 0])
         cube([BRACE_SIZE_X, BRACE_SIZE_Y, BRACE_SIZE_Z+BRACE_TWEAK_Z]);
       }
-      difference() {
+      { // Cross-support spire
+        translate([0,-BLOCK_SIZE_Y/2,BLOCK_SIZE_Z+PLATE_SIZE_Z+RACK_SIZE_Z-BRACE_SIZE_Z])
+        difference() {
+          translate([-BRACE_SIZE_X/2, 0, 0])
+            cube([BRACE_SIZE_X, BRACE_SIZE_Y, BRACE_SIZE_Z+BRACE_TWEAK_Z-RACK_OVERHANG_SIZE_Y]);
+
+          translate([0,-0.5-RACK_OVERHANG_STICKOUT_SIZE_Y,0])
+          translate([0,RACK_OFFSET_Y+BLOCK_SIZE_Y/2-(-BLOCK_SIZE_Y/2),0]) // Rack hole
+            cube([RACK_SIZE_X+4*SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
+        }
+      }
+      difference() { // Motor housing
+        BASE_OZ = 3.3;
         // Yes, I know this is a mess
+        translate([7,0,0])
         translate([0,0,-5.5 - MOTOR_SIZE_Z/2]) {
-          translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET]) {
+          translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + BASE_OZ]) {
             difference() {
               translate([0,WORM_SLOP,0]) {
                 union() {
-                  nema17_housing(slop=MOTOR_HOUSING_SLOP, top=false, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
+                  nema17_housing_on_side(slop=MOTOR_HOUSING_SLOP, top=false, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
                   // Base
-                  BASE_SIZE_Z = BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET -5.5 - MOTOR_SIZE_Z/2 -(2*MOTOR_HOUSING_TOP_THICKNESS+MOTOR_SIZE_Z + 2*MOTOR_HOUSING_SLOP)/2;
-                  translate([0,0,BASE_SIZE_Z/2 -(-5.5 - MOTOR_SIZE_Z/2) -(BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET)])
+                  BASE_SIZE_Z = BLOCK_SIZE_Z + PLATE_SIZE_Z + BASE_OZ -5.5 - MOTOR_SIZE_Z/2 -(2*MOTOR_HOUSING_TOP_THICKNESS+MOTOR_SIZE_Z + 2*MOTOR_HOUSING_SLOP)/2;
+                  translate([0,0,BASE_SIZE_Z/2 -(-5.5 - MOTOR_SIZE_Z/2) -(BLOCK_SIZE_Z + PLATE_SIZE_Z + BASE_OZ)])
                     cube([2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, 2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(17) + 2*MOTOR_HOUSING_SLOP, BASE_SIZE_Z], center=true);
                 }
               }
@@ -290,9 +315,9 @@ MOTOR_SIZE_Z = 39.3;
             }
           }
         }
-        {// Cutouts
-          CUTOUT_SIZE_X = 10;
-          translate([-CUTOUT_SIZE_X - PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
+        {// Plate attachment cutouts
+          CUTOUT_SIZE_X = 12;
+          * translate([-CUTOUT_SIZE_X - PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
             undercut([CUTOUT_SIZE_X, FOREVER, 10.5]);
           translate([CUTOUT_SIZE_X + PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
             translate([0,FOREVER,0])
@@ -303,7 +328,7 @@ MOTOR_SIZE_Z = 39.3;
               translate([CUTOUT_SIZE_X + PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
                 translate([0,-8,0])
                   rotate([0,0,90])
-                    undercut([10, CUTOUT_SIZE_X, 1]);
+                    undercut([40, CUTOUT_SIZE_X, 1]);
         }
       }
     }
@@ -312,14 +337,18 @@ MOTOR_SIZE_Z = 39.3;
     translate([0,RACK_OFFSET_Y+BLOCK_SIZE_Y/2-RACK_SIZE_Y,FOREVER/2+BLOCK_SIZE_Z+PLATE_SIZE_Z]) // Remove wall covering rack, nearest syringe
       cube([RACK_SIZE_X+SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
     cylinder(d=SYRINGE_DIAM+SLOP, h=FOREVER, center=true);
-    { // Worm cutout
-      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET])
-        cylinder(d=WORM_DIAM+GEAR_OFFSET+SLOP, h=WORM_HEIGHT+SLOP);
-      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_CUTOUT_Z_OFFSET + WORM_HEIGHT + SLOP])
-        cylinder(d1=WORM_DIAM+GEAR_OFFSET+SLOP, d2=0, h=WORM_DIAM);
+    union() { // Gear cutout
+      translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_OZ])
+        rotate([0,90,0])
+        cylinder(d=WORM_DIAM+GEAR_OFFSET+SLOP, h=WORM_HEIGHT+SLOP,center=true);
     }
   }
 }
+      * union() { // Gear mock
+        translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_OZ])
+          rotate([0,90,0])
+          cylinder(d=WORM_DIAM+GEAR_OFFSET, h=WORM_HEIGHT,center=true);
+      }
 
 
 MOTOR_HOUSING_SIDE_THICKNESS = 10;
