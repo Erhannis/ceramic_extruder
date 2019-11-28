@@ -8,7 +8,8 @@ use <deps.link/BOSL/nema_steppers.scad>
 use <deps.link/BOSL/joiners.scad>
 use <deps.link/erhannisScad/misc.scad>
 use <deps.link/quickfitPlate/blank_plate.scad>
-use <deps.link/moreGears/Getriebe.scad>
+use <deps.link/getriebe/Getriebe.scad>
+use <deps.link/gearbox/gearbox.scad>
 
 $fn=60;
 
@@ -120,13 +121,6 @@ module undercut(size=[1,1,1], center=false) {
 
 //undercut([5, 10, 7], center=true);
 
-/*
-translate([40,0,0])
-difference() {
-  gear(mm_per_tooth=4.2,number_of_teeth=10,clearance=0.1,thickness=5);
-  flattedShaft(h=40,r=2.5 + 0.15,center=true);
-}
-*/
 
 {
   FOREVER = 1000;
@@ -149,15 +143,32 @@ RACK_SIZE_Z = SYRINGE_LENGTH + RACK_OVERHANG_SIZE_Z + 15;
 
 RACK_OFFSET_Y = 2;
 
-WORM_DIAM = 52;
+GEAR_SCALE = 5/4;
+GEAR_SZ = 5;
+GEAR_RING_D = 44;
+
+WORM_DIAM = pfeilrad_dims(modul=2, zahnzahl=33, breite=GEAR_SZ*GEAR_SCALE, bohrung=0, eingriffswinkel=20, schraegungswinkel=30, optimiert=false)[0];
 WORM_HEIGHT = RACK_SIZE_X;
 MM_PER_REV = 2.08;
+
+JOINER_DEPTH = 5;
+JOINER_HEIGHT = 15;
+GEAR_SHEATH_W = 6;
+GEAR_SHEATH_D = (GEAR_RING_D+GEAR_SHEATH_W)*GEAR_SCALE;
+GEAR_SHEATH_H = GEAR_SZ*GEAR_SCALE;
 
 * rotate([0,-90,0])
 { // Plunger
   union() {
-    if (false) {
-      worm_rack(xs = RACK_SIZE_X, ys = RACK_SIZE_Y - GEAR_OFFSET, z = RACK_SIZE_Z, worm_diam = WORM_DIAM, o = GEAR_OFFSET, mmPerRev = MM_PER_REV);
+    if (true) {
+      // Mildly obnoxious math to make the rack the right size
+      HOEHE0 = RACK_SIZE_Y;
+      HOEHE = RACK_SIZE_Y - (zahnstange_dims(modul=2, laenge=RACK_SIZE_Z, hoehe=HOEHE0, breite=RACK_SIZE_X/2, eingriffswinkel = 20, schraegungswinkel = 30)[3] - HOEHE0);
+      
+      rotate([0,90,0]) translate([0,0,RACK_SIZE_X/2]) rotate([0,180,0]) {
+    zahnstange(modul=2, laenge=RACK_SIZE_Z, hoehe=HOEHE, breite=RACK_SIZE_X/2, eingriffswinkel = 20, schraegungswinkel = 30);
+    mirror([0,0,1]) zahnstange(modul=2, laenge=RACK_SIZE_Z, hoehe=HOEHE, breite=RACK_SIZE_X/2, eingriffswinkel = 20, schraegungswinkel = 30);
+      }
     } else {
       cube([RACK_SIZE_X, RACK_SIZE_Y, RACK_SIZE_Z]);
     }
@@ -191,56 +202,19 @@ BRACE_SIZE_Z = RACK_SIZE_Z + 10;
 BRACE_Y_COVER = 0;//2.5;
 BRACE_TWEAK_Z = -35;
 
-WORM_OZ = PLATE_SIZE_Z+22;
+WORM_OZ = PLATE_SIZE_Z - 10;
 WORM_SLOP = 0.8;
+
+WORM_PZ = BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_OZ;
+//translate([0,50,WORM_PZ]) cube(center=true);
 
 SLOP = 1;
 MOTOR_HOUSING_SLOP = 0;
 
 MOTOR_SIZE_Z = 39.3;
 
-function test(modul, zahnzahl_rad, zahnzahl_ritzel, achsenwinkel=90, zahnbreite, bohrung, eingriffswinkel = 20, schraegungswinkel=0) = let (
-  zahnzahl = zahnzahl_rad,
-	delta_rad = atan(sin(achsenwinkel)/(zahnzahl_ritzel/zahnzahl_rad+cos(achsenwinkel))),	// Kegelwinkel des Rads
-  teilkegelwinkel = delta_rad,
-  
-	// Dimensions-Berechnungen
-	d_aussen = modul * zahnzahl,									// Teilkegeldurchmesser auf der Kegelgrundfläche,
-																	// entspricht der Sehne im Kugelschnitt
-	r_aussen = d_aussen / 2,										// Teilkegelradius auf der Kegelgrundfläche 
-	rg_aussen = r_aussen/sin(teilkegelwinkel),						// Großkegelradius für Zahn-Außenseite, entspricht der Länge der Kegelflanke;
-	c = modul / 6,													// Kopfspiel
-	df_aussen = d_aussen - (modul +c) * 2 * cos(teilkegelwinkel),
-	rf_aussen = df_aussen / 2,
-	delta_f = asin(rf_aussen/rg_aussen),
-	rkf = rg_aussen*sin(delta_f),									// Radius des Kegelfußes
-	// Größen für Komplementär-Kegelstumpf
-	hoehe_k = (rg_aussen-zahnbreite)/cos(teilkegelwinkel),			// Höhe des Komplementärkegels für richtige Zahnlänge
-	rk = (rg_aussen-zahnbreite)/sin(teilkegelwinkel),				// Fußradius des Komplementärkegels
-	rfk = rk*hoehe_k*tan(delta_f)/(rk+hoehe_k*tan(delta_f)),		// Kopfradius des Zylinders für 
-																	// Komplementär-Kegelstumpf
-  
-  
-  outer = rkf*1.001,
-  inner = (rfk/rkf) * rkf*1.001
-  ) outer;
 
-
-  GEAR_SIZE_MULTIPLIER = 1;
-
-
-difference() {
-  union() {
-    outer_r = test(modul=1*GEAR_SIZE_MULTIPLIER, zahnzahl_rad=50, zahnzahl_ritzel=11, achsenwinkel=90, zahnbreite=5*GEAR_SIZE_MULTIPLIER, bohrung=3, eingriffswinkel = 20, schraegungswinkel=30);
-    translate([0,0,-5]) cylinder(r=outer_r,h=5);
-    pfeilkegelradpaar(modul=1*GEAR_SIZE_MULTIPLIER, zahnzahl_rad=50, zahnzahl_ritzel=11, achsenwinkel=90, zahnbreite=5*GEAR_SIZE_MULTIPLIER, bohrung_rad=3, bohrung_ritzel=3, eingriffswinkel = 20, schraegungswinkel=30, zusammen_gebaut=false);
-  }
-  translate([35,0,0])
-    flattedShaft(h=40,r=2.5 + 0.15,center=true);
-  flattedShaft(h=40,r=2.5 + 0.15,center=true);
-}
-
-* union() { // Main block
+union() { // Main block
   difference() {
     union() {
       translate([0,0,BLOCK_SIZE_Z/2 + PLATE_SIZE_Z]) // Body block
@@ -293,7 +267,7 @@ difference() {
             cube([RACK_SIZE_X+4*SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
         }
       }
-      difference() { // Motor housing
+****      difference() { // Motor housing
         BASE_OZ = 3.3;
         // Yes, I know this is a mess
         translate([7,0,0])
@@ -315,7 +289,7 @@ difference() {
             }
           }
         }
-        {// Plate attachment cutouts
+        { // Plate attachment cutouts
           CUTOUT_SIZE_X = 12;
           * translate([-CUTOUT_SIZE_X - PLATE_SIZE_X/2, 10 + BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, 0])
             undercut([CUTOUT_SIZE_X, FOREVER, 10.5]);
@@ -342,14 +316,58 @@ difference() {
         rotate([0,90,0])
         cylinder(d=WORM_DIAM+GEAR_OFFSET+SLOP, h=WORM_HEIGHT+SLOP,center=true);
     }
+    union() { // Gear sheath attachment points
+      GEAR_SCALE = 5/4;
+      GEAR_SZ = 5;
+      GEAR_SZ_GAP = 2;
+      translate([-GEAR_SCALE*(GEAR_SZ+GEAR_SZ_GAP),BLOCK_SIZE_Y/2+BRACE_SIZE_Y,WORM_PZ])
+      translate([-GEAR_SHEATH_H/2,-JOINER_DEPTH,-JOINER_HEIGHT/2])
+      for (i=[-1,1]) {
+        translate([0,0,i*(GEAR_SHEATH_D/2-JOINER_HEIGHT/2)]) pinJoinerCutout(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=GEAR_SHEATH_H,width_slop=0.8);
+      }
+    }
   }
 }
-      * union() { // Gear mock
-        translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_OZ])
-          rotate([0,90,0])
-          cylinder(d=WORM_DIAM+GEAR_OFFSET, h=WORM_HEIGHT,center=true);
-      }
 
+* union() { // Gearbox gear sheath (also print out the gearbox at https://github.com/Erhannis/gearbox , or https://www.thingiverse.com/thing:3997024 , or just use the linked dependency )
+  // You should probably print it at between -0.08 and -0.1 horizontal expansion
+  // Excerpted from gearbox.scad
+  difference() {
+    pfeilrad(modul=2, zahnzahl=33, breite=GEAR_SZ*GEAR_SCALE, bohrung=0, eingriffswinkel=20, schraegungswinkel=30, optimiert=false);
+    scale(GEAR_SCALE) union() {
+      cylinder(d=RING_D,h=GEAR_SZ);
+      grooves();
+    }
+  }
+}
+
+* union() { // Gearbox attachment sheath
+  // You should probably print it at between -0.08 and -0.1 horizontal expansion
+  // Excerpted from gearbox.scad
+  difference() {
+    union() {
+      h0 = GEAR_SHEATH_H;
+      d0 = GEAR_SHEATH_D;
+      cylinder(d=d0,h=h0);
+      translate([0,-d0/4,h0/2]) cube([d0,d0/2,h0], center=true);
+      for (i=[-1,1]) {
+        translate([JOINER_HEIGHT/2+i*(d0/2-JOINER_HEIGHT/2),-d0/2-JOINER_DEPTH,0]) rotate([0,-90,0]) pinJoiner(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=h0,width_slop=0);
+      }
+    }
+    scale(GEAR_SCALE) union() {
+      cylinder(d=GEAR_RING_D,h=GEAR_SZ);
+      grooves();
+    }
+  }
+}
+
+* union() { // Joiner pins
+  // Note that these float slightly above 0Z, because of the way the slop is applied
+  //   So you should render them into separate STL files so you don't have problems with
+  //   parts of your print floating and messing up your print.
+  rotate([-90,0,0]) pinJoinerPin(depth=JOINER_DEPTH, height=JOINER_HEIGHT);
+  translate([0,5,0]) rotate([-90,0,0]) pinJoinerPin(depth=JOINER_DEPTH, height=JOINER_HEIGHT);
+}
 
 MOTOR_HOUSING_SIDE_THICKNESS = 10;
 MOTOR_HOUSING_TOP_THICKNESS = 3.5;

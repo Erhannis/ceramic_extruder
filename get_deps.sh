@@ -31,5 +31,7 @@ fi
 cd "$REMOTE"
 git clone https://github.com/revarbat/BOSL
 git clone https://github.com/erhannis/gears
+git clone https://github.com/erhannis/getriebe
 git clone https://github.com/erhannis/erhannisScad
 git clone https://github.com/erhannis/quickfitPlate
+git clone https://github.com/erhannis/gearbox
