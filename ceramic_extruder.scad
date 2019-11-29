@@ -222,7 +222,7 @@ GEAR_OFFSET = 1;
 RACK_SIZE_X = 7;
 RACK_SIZE_Y = 7 + GEAR_OFFSET;
 RACK_OVERHANG_SIZE_X = RACK_SIZE_X;
-RACK_OVERHANG_STICKOUT_SIZE_Y = 39-9.5;
+RACK_OVERHANG_STICKOUT_SIZE_Y = 39-9.5+0.9;
 RACK_OVERHANG_SIZE_Y = 20;
 RACK_OVERHANG_LEDGE_Z = RACK_OVERHANG_SIZE_X;
 RACK_OVERHANG_SIZE_Z = RACK_OVERHANG_SIZE_Y + RACK_OVERHANG_LEDGE_Z;
@@ -248,7 +248,7 @@ GEAR_SHEATH_H = GEAR_SZ*GEAR_SCALE;
 PLATE_SIZE_X = 28;
 PLATE_SIZE_Y = 100;
 PLATE_SIZE_Z = 5;
-PLATE_OFFSET = 20;
+PLATE_OFFSET = 24;
 
 BLOCK_SIZE_X = PLATE_SIZE_X;
 BLOCK_SIZE_Y = 35;
@@ -260,7 +260,7 @@ BRACE_SIZE_Z = RACK_SIZE_Z + 10;
 BRACE_Y_COVER = 0;//2.5;
 BRACE_TWEAK_Z = -35;
 
-WORM_OZ = PLATE_SIZE_Z - 10;
+WORM_OZ = PLATE_SIZE_Z;
 WORM_SLOP = 0.8;
 WORM_CUTOUT_SLOP = 5;
 
@@ -269,7 +269,7 @@ WORM_PY = GEAR_SHEATH_D/2+BLOCK_SIZE_Y/2+BRACE_SIZE_Y;
 //translate([0,WORM_PY,WORM_PZ]) cube(center=true);
 
 SLOP = 1;
-MOTOR_HOUSING_SLOP = 0.25;
+MOTOR_HOUSING_SLOP = 0.1;
 
 MOTOR_SIZE_Z = 39.3;
 
@@ -301,7 +301,7 @@ MOTOR_SIZE_Z = 39.3;
   }
 }
 
-union() { // Main block
+* union() { // Main block
   difference() {
     union() {
       translate([0,0,BLOCK_SIZE_Z/2 + PLATE_SIZE_Z]) // Body block
@@ -351,7 +351,7 @@ union() { // Main block
 
           translate([0,-0.5-RACK_OVERHANG_STICKOUT_SIZE_Y,0])
           translate([0,RACK_OFFSET_Y+BLOCK_SIZE_Y/2-(-BLOCK_SIZE_Y/2),0]) // Rack hole
-            cube([RACK_SIZE_X+4*SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
+            cube([RACK_SIZE_X+SLOP, RACK_SIZE_Y+SLOP, FOREVER], center=true);
         }
       }
       difference() { // Motor housing
@@ -377,6 +377,9 @@ union() { // Main block
               cube([HOUSE_WIDTH/2,HOUSE_HEIGHT,BASE_HEIGHT],center=true);
             }
           }
+        }
+        {
+          translate([-PLATE_SIZE_X/2,0,0]) OXm();
         }
         union(){ // Plate attachment cutouts
           CUTOUT_SIZE_X = FOREVER;
@@ -406,14 +409,25 @@ union() { // Main block
     cylinder(d=SYRINGE_DIAM+SLOP, h=FOREVER, center=true);
     union() { // Gear cutout
       translate([0, BLOCK_SIZE_Y/2 + WORM_DIAM/2 + GEAR_OFFSET + (RACK_SIZE_Y - GEAR_OFFSET)/2, BLOCK_SIZE_Z + PLATE_SIZE_Z + WORM_OZ])
-        rotate([0,90,0])
-        cylinder(d=WORM_DIAM+GEAR_OFFSET+SLOP+WORM_CUTOUT_SLOP, h=WORM_HEIGHT+SLOP,center=true);
+        rotate([0,90,0]) {
+          cylinder(d=WORM_DIAM+GEAR_OFFSET+SLOP+WORM_CUTOUT_SLOP, h=WORM_HEIGHT+SLOP,center=true);
+          difference() {
+            union() {
+              d0 = WORM_DIAM+GEAR_OFFSET+SLOP+WORM_CUTOUT_SLOP;
+              h0 = WORM_HEIGHT+SLOP;
+              for (i = [0,1])
+                mirror([0,0,i])
+                cylinder(d1=d0+h0,d2=d0, h=h0/2);
+            }
+            rotate([0,0,45]) OXp();
+          }
+        }
     }
     union() { // Gear sheath attachment points
       translate([-GEAR_SCALE*(GEAR_SZ+GEAR_SZ_GAP),BLOCK_SIZE_Y/2+BRACE_SIZE_Y,WORM_PZ])
       translate([-GEAR_SHEATH_H/2,-JOINER_DEPTH,-JOINER_HEIGHT/2])
       for (i=[-1,1]) {
-        translate([0,0,i*(GEAR_SHEATH_D/2-JOINER_HEIGHT/2)]) pinJoinerCutout(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=GEAR_SHEATH_H,width_slop=0.8);
+        translate([0,0,i*(GEAR_SHEATH_D/2-JOINER_HEIGHT/2)]) pinJoinerCutout(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=GEAR_SHEATH_H,width_slop=0.6);
       }
     }
   }
@@ -423,7 +437,7 @@ union() { // Main block
   // You should probably print it at between -0.08 and -0.1 horizontal expansion
   // Excerpted from gearbox.scad
   difference() {
-    pfeilrad(modul=2, zahnzahl=33, breite=GEAR_SZ*GEAR_SCALE, bohrung=0, eingriffswinkel=20, schraegungswinkel=30, optimiert=false);
+    pfeilrad(modul=2, zahnzahl=35, breite=GEAR_SZ*GEAR_SCALE, bohrung=0, eingriffswinkel=20, schraegungswinkel=30, optimiert=false);
     scale(GEAR_SCALE) union() {
       cylinder(d=GEAR_RING_D,h=GEAR_SZ);
       grooves();
@@ -432,7 +446,9 @@ union() { // Main block
 }
 
 * union() { // Gearbox attachment sheath
-  // You should probably print it at between -0.08 and -0.1 horizontal expansion
+  // You should probably print it at between -0.08 and -0.1 horizontal expansion.
+  //   Also around -0.3 initial layer horizontal expansion, unless you're
+  //   confident your first layer won't get smooshed out - it blocks the pins.
   // Excerpted from gearbox.scad
   difference() {
     union() {
@@ -441,7 +457,7 @@ union() { // Main block
       cylinder(d=d0,h=h0);
       translate([0,-d0/4,h0/2]) cube([d0,d0/2,h0], center=true);
       for (i=[-1,1]) {
-        translate([JOINER_HEIGHT/2+i*(d0/2-JOINER_HEIGHT/2),-d0/2-JOINER_DEPTH,0]) rotate([0,-90,0]) pinJoiner(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=h0,width_slop=0,pin_height_slop=0);
+        translate([JOINER_HEIGHT/2+i*(d0/2-JOINER_HEIGHT/2),-d0/2-JOINER_DEPTH,0]) rotate([0,-90,0]) pinJoiner(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=h0,width_slop=0,pin_height_slop=0.5);
       }
     }
     scale(GEAR_SCALE) union() {
@@ -452,17 +468,31 @@ union() { // Main block
 }
 
 * union() { // Joiner pins
-  // Note that these float slightly above 0Z, because of the way the slop is applied
+  // Note that these aren't level with 0Z, because of the way the slop is applied
   //   So you should render them into separate STL files so you don't have problems with
   //   parts of your print floating and messing up your print.
-  rotate([-90,0,0]) pinJoinerPin(depth=JOINER_DEPTH, height=JOINER_HEIGHT);
-  translate([0,5,0]) rotate([-90,0,0]) pinJoinerPin(depth=JOINER_DEPTH, height=JOINER_HEIGHT);
+  // Note also that I've roughly chopped off the end of these so they don't stick
+  //   out into the plunger shaft.  It probably won't properly reflect parameter changes.
+  difference() {
+    translate([-11.5,0,0]) {
+      rotate([-90,0,0]) pinJoinerPin(depth=JOINER_DEPTH, height=JOINER_HEIGHT);
+      translate([0,5,0]) rotate([-90,0,0]) pinJoinerPin(depth=JOINER_DEPTH, height=JOINER_HEIGHT);
+    }
+    OXp();
+  }
 }
 
 MOTOR_HOUSING_SIDE_THICKNESS = 10;
 MOTOR_HOUSING_TOP_THICKNESS = 3.5;
 
-* union() { // Motor housing top
-  translate([70,0,MOTOR_SIZE_Z/2+MOTOR_HOUSING_SLOP+MOTOR_HOUSING_TOP_THICKNESS])
-  nema17_housing_weird(slop=MOTOR_HOUSING_SLOP, top=true, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
+union() { // Motor housing top
+  difference() {
+    NEMA = 17;
+    W0 = 2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(NEMA) + 2*MOTOR_HOUSING_SLOP;
+    translate([-W0/2+MOTOR_HOUSING_SIDE_THICKNESS/2,W0/2-MOTOR_HOUSING_SIDE_THICKNESS/2,MOTOR_SIZE_Z/2+MOTOR_HOUSING_SLOP+MOTOR_HOUSING_TOP_THICKNESS])
+      nema17_housing_weird(slop=MOTOR_HOUSING_SLOP, top=true, side_thickness=MOTOR_HOUSING_SIDE_THICKNESS, top_thickness=MOTOR_HOUSING_TOP_THICKNESS);
+    if (true) { // If you want this to fit the Snappy Quickfit Platform
+      rotate([0,0,-45]) translate([0,0,0]) OXp();
+    }
+  }
 }
