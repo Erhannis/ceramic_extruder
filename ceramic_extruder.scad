@@ -301,7 +301,7 @@ MOTOR_SIZE_Z = 39.3;
   }
 }
 
-* union() { // Main block
+union() { // Main block
   difference() {
     union() {
       translate([0,0,BLOCK_SIZE_Z/2 + PLATE_SIZE_Z]) // Body block
@@ -433,7 +433,10 @@ MOTOR_SIZE_Z = 39.3;
   }
 }
 
-* union() { // Gearbox gear sheath (also print out the gearbox at https://github.com/Erhannis/gearbox , or https://www.thingiverse.com/thing:3997024 , or just use the linked dependency )
+* union() { // Gearbox gear sheath
+  // (also print out the gearbox at https://github.com/Erhannis/gearbox , or https://www.thingiverse.com/thing:3997024 , or just use the linked dependency;
+  //   and when you print it out, make the largeRing big, the smallSun big (and drive), and the big side of the shafts big,
+  //   so that one side of the finished gearbox is multiple gears wide, to help keep things straight and not bind.)
   // You should probably print it at between -0.08 and -0.1 horizontal expansion
   // Excerpted from gearbox.scad
   difference() {
@@ -454,15 +457,17 @@ MOTOR_SIZE_Z = 39.3;
     union() {
       h0 = GEAR_SHEATH_H;
       d0 = GEAR_SHEATH_D;
-      cylinder(d=d0,h=h0);
+      cylinder(d=d0,h=h0*4);
       translate([0,-d0/4,h0/2]) cube([d0,d0/2,h0], center=true);
-      for (i=[-1,1]) {
-        translate([JOINER_HEIGHT/2+i*(d0/2-JOINER_HEIGHT/2),-d0/2-JOINER_DEPTH,0]) rotate([0,-90,0]) pinJoiner(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=h0,width_slop=0,pin_height_slop=0.5);
-      }
+      translate([0,0,h0])
+        rotate([0,180,0])
+        for (i=[-1,1]) {
+          translate([JOINER_HEIGHT/2+i*(d0/2-JOINER_HEIGHT/2),-d0/2-JOINER_DEPTH,0]) rotate([0,-90,0]) pinJoiner(depth=JOINER_DEPTH,height=JOINER_HEIGHT,width=h0,width_slop=0,pin_height_slop=0.5);
+        }
     }
     scale(GEAR_SCALE) union() {
-      cylinder(d=GEAR_RING_D,h=GEAR_SZ);
-      grooves();
+      cylinder(d=GEAR_RING_D,h=GEAR_SZ*4);
+      grooves(big=true);
     }
   }
 }
@@ -485,7 +490,7 @@ MOTOR_SIZE_Z = 39.3;
 MOTOR_HOUSING_SIDE_THICKNESS = 10;
 MOTOR_HOUSING_TOP_THICKNESS = 3.5;
 
-union() { // Motor housing top
+* union() { // Motor housing top
   difference() {
     NEMA = 17;
     W0 = 2*MOTOR_HOUSING_SIDE_THICKNESS+nema_motor_width(NEMA) + 2*MOTOR_HOUSING_SLOP;
